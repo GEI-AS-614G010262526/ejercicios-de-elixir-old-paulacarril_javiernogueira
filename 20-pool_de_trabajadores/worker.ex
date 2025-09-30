@@ -15,7 +15,8 @@ defmodule Trabajador do
         send(from, {:resultado, self(), resultado})
         loop()
 
-      :stop -> :ok
+      {:stop, server} ->
+        send(server, {:worker_stopped, self()})
     end
   end
 
