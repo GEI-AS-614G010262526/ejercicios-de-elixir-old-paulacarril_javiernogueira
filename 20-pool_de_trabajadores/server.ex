@@ -68,26 +68,23 @@ defmodule Servidor do
 
   defp loop(workers, free_workers, client, results, pending_jobs, num_jobs) do
     receive do
+      # Caso: Recibir run_bach -> con menos o igual numero de trabajos que trabajadores libres
       {:trabajos, from, jobs} when length(jobs) <= length(free_workers) and num_jobs == 0->
         new_free_workers = send_jobs(free_workers, jobs)
         loop(workers, new_free_workers, from, results, [], length(jobs))
 
+      # Caso: Recibir run_bach -> con mas trabajos que trabajadores libres
       {:trabajos, from, jobs} ->
         {to_send, rest} = Enum.split(jobs, length(free_workers))
         new_free_workers = send_jobs(free_workers, to_send)
         loop(workers, new_free_workers, from, results, rest, (num_jobs + length(jobs)))
 
-      {:stop, from} ->
-        Enum.each(workers, fn worker ->
-          send(worker, {:stop, self()})
-        end)
-        wait_for_workers(length(workers))
-        send(from, :stopped)
-
+      # Caso: Recibir resultado final desde loop y enviar al cliente
       {:resultado, from, result} when length(results) == (num_jobs-1) ->
         send(client ,{:done, [result | results]})
         loop(workers, [from | free_workers], nil, [], [], 0)
 
+      # Caso: Recibir resultados intermedios desde loop y enviar nuevos trabajos si hay pendientes
       {:resultado, from, result} ->
         case pending_jobs do
           [job | rest] ->
@@ -96,6 +93,14 @@ defmodule Servidor do
           [] ->
             loop(workers, free_workers, client, [result | results], pending_jobs, num_jobs)
         end
+
+      # Caso: Recibir stop -> parar todos los trabajadores
+      {:stop, from} ->
+        Enum.each(workers, fn worker ->
+          send(worker, {:stop, self()})
+        end)
+        wait_for_workers(length(workers))
+        send(from, :stopped)
     end
   end
 
