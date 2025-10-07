@@ -18,7 +18,7 @@ defmodule Servidor do
   def start(n) do
     IO.puts("Iniciando el servidor...")
     workers = start_workers(n)
-    {:ok, spawn(fn -> server(workers, nil, [], 0) end)}
+    {:ok, spawn(fn -> server(workers, workers, nil, [], [], 0) end)}
   end
 
   @doc """
@@ -62,13 +62,16 @@ defmodule Servidor do
   ###############
   ## Server
   ###############
-  defp server(workers, client, resultados, num_jobs) do
+  defp server(workers, free_workers, client, resultados, pending_jobs, num_jobs) do
     receive do
-      {:trabajos, from, jobs} when length(jobs) <= length(workers) and num_jobs == 0->
-        send_jobs(workers, jobs)
-        server(workers, from, resultados, length(jobs))
-      {:trabajos, _from, _jobs} ->
-        raise("not implemented yet")
+      {:trabajos, from, jobs} when length(jobs) <= length(free_workers) and num_jobs == 0->
+        free_w = send_jobs(free_workers, jobs)
+        server(workers, free_w, from, resultados, [], length(jobs))
+
+      {:trabajos, from, jobs} ->
+        {to_send, rest} = Enum.split(jobs, length(free_workers))
+        free_w = send_jobs(free_workers, to_send)
+        server(workers, free_w, from, resultados, rest, (num_jobs + length(jobs)))
 
       {:stop, from} ->
         Enum.each(workers, fn worker ->
@@ -77,15 +80,22 @@ defmodule Servidor do
         wait_for_workers(length(workers))
         send(from, :stopped)
 
-      {:resultado, _from, result} when length(resultados) == (num_jobs-1) ->
+      {:resultado, from, result} when length(resultados) == (num_jobs-1) ->
         send(client ,{:done, [result | resultados]})
-        server(workers, nil, [], 0)
-      {:resultado, _from, result} ->
-        server(workers, client, [result | resultados], num_jobs)
+        server(workers, [from | free_workers], nil, [], [], 0)
+
+      {:resultado, from, result} ->
+        case pending_jobs do
+          [job | rest] ->
+            send(from, {:trabajo, self(), job})
+            server(workers, free_workers, client, [result | resultados], rest, num_jobs)
+          [] ->
+            server(workers, free_workers, client, [result | resultados], pending_jobs, num_jobs)
+        end
     end
   end
 
-  defp send_jobs(_worker, []), do: :ok
+  defp send_jobs(workers, []), do: workers
 
   defp send_jobs([worker | workers], [job | jobs]) do
     send(worker, {:trabajo, self(), job})
