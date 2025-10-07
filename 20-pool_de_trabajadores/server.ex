@@ -68,16 +68,10 @@ defmodule Servidor do
 
   defp loop(workers, free_workers, client, results, pending_jobs, num_jobs) do
     receive do
-      # Caso: Recibir run_bach -> con menos o igual numero de trabajos que trabajadores libres
-      {:trabajos, from, jobs} when length(jobs) <= length(free_workers) and num_jobs == 0->
-        new_free_workers = send_jobs(free_workers, jobs)
-        loop(workers, new_free_workers, from, results, [], length(jobs))
-
-      # Caso: Recibir run_bach -> con mas trabajos que trabajadores libres
+      # Caso: Recibir run_batch -> con menos o igual numero de trabajos que trabajadores libres
       {:trabajos, from, jobs} ->
-        {to_send, rest} = Enum.split(jobs, length(free_workers))
-        new_free_workers = send_jobs(free_workers, to_send)
-        loop(workers, new_free_workers, from, results, rest, (num_jobs + length(jobs)))
+        {new_free_workers, remaining_jobs} = send_jobs(free_workers, jobs)
+        loop(workers, new_free_workers, from, results, remaining_jobs, num_jobs + length(jobs))
 
       # Caso: Recibir resultado final desde loop y enviar al cliente
       {:resultado, from, result} when length(results) == (num_jobs-1) ->
@@ -104,7 +98,9 @@ defmodule Servidor do
     end
   end
 
-  defp send_jobs(workers, []), do: workers
+  defp send_jobs(workers, []), do: {workers, []}
+
+  defp send_jobs([], jobs), do: {[], jobs}
 
   defp send_jobs([worker | workers], [job | jobs]) do
     send(worker, {:trabajo, self(), job})
