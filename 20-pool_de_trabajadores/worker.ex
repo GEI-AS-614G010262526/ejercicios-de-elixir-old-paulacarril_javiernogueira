@@ -11,8 +11,8 @@ defmodule Trabajador do
   defp loop() do
     receive do
       {:trabajo, from, func} ->
-        resultado = work(func)
-        send(from, {:resultado, self(), resultado})
+        result = work(func)
+        send(from, {:resultado, self(), result})
         loop()
 
       {:stop, server} ->

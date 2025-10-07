@@ -62,16 +62,16 @@ defmodule Servidor do
   ###############
   ## Server
   ###############
-  defp server(workers, free_workers, client, resultados, pending_jobs, num_jobs) do
+  defp server(workers, free_workers, client, results, pending_jobs, num_jobs) do
     receive do
       {:trabajos, from, jobs} when length(jobs) <= length(free_workers) and num_jobs == 0->
-        free_w = send_jobs(free_workers, jobs)
-        server(workers, free_w, from, resultados, [], length(jobs))
+        new_free_workers = send_jobs(free_workers, jobs)
+        server(workers, new_free_workers, from, results, [], length(jobs))
 
       {:trabajos, from, jobs} ->
         {to_send, rest} = Enum.split(jobs, length(free_workers))
-        free_w = send_jobs(free_workers, to_send)
-        server(workers, free_w, from, resultados, rest, (num_jobs + length(jobs)))
+        new_free_workers = send_jobs(free_workers, to_send)
+        server(workers, new_free_workers, from, results, rest, (num_jobs + length(jobs)))
 
       {:stop, from} ->
         Enum.each(workers, fn worker ->
@@ -80,17 +80,17 @@ defmodule Servidor do
         wait_for_workers(length(workers))
         send(from, :stopped)
 
-      {:resultado, from, result} when length(resultados) == (num_jobs-1) ->
-        send(client ,{:done, [result | resultados]})
+      {:resultado, from, result} when length(results) == (num_jobs-1) ->
+        send(client ,{:done, [result | results]})
         server(workers, [from | free_workers], nil, [], [], 0)
 
       {:resultado, from, result} ->
         case pending_jobs do
           [job | rest] ->
             send(from, {:trabajo, self(), job})
-            server(workers, free_workers, client, [result | resultados], rest, num_jobs)
+            server(workers, free_workers, client, [result | results], rest, num_jobs)
           [] ->
-            server(workers, free_workers, client, [result | resultados], pending_jobs, num_jobs)
+            server(workers, free_workers, client, [result | results], pending_jobs, num_jobs)
         end
     end
   end
