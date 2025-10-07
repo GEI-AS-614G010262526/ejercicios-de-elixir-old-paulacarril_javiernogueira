@@ -57,6 +57,11 @@ defmodule Gestor_ND do
   """
   @spec avail() :: integer()
   def avail() do
+    send(:gestor, {:avail, self()})
+    receive do
+      {:avail, n} ->
+        n
+    end
 
   end
 
@@ -87,7 +92,7 @@ defmodule Gestor_ND do
             loop(busy_resources, free_resources)
         end
       {:avail, from} ->
-        send(from, length(free_resources))
+        send(from, {:avail, length(free_resources)})
         loop(busy_resources, free_resources)
       {:stop, from} ->
         send(from, :stopped)
