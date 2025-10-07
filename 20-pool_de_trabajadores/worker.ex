@@ -1,6 +1,6 @@
 defmodule Trabajador do
   @moduledoc """
-    Trabajdores para el _Servidor_
+    Trabajadores para el _Servidor_
   """
 
   @spec start() :: pid()
