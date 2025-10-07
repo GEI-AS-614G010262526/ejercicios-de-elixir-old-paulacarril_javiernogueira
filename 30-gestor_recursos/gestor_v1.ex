@@ -4,18 +4,32 @@ defmodule Gestor_ND do
   """
 
   @doc """
+    Inicia el gestor con una lista de recursos disponibles.
 
+    Registra el proceso bajo el nombre `:gestor`.
+
+    ## Parámetros
+      - `resources`: lista de recursos (átomos) que el gestor podrá asignar.
+
+    ## Ejemplo
+        iex> Gestor_ND.start([:res1, :res2, :res3])
+        :iniciated
   """
   @spec start(list()) :: list()
   def start(resources) do
     pid = spawn(fn -> init(resources) end)
     Process.register(pid, :gestor)
-    IO.puts("Gestor registered as : \":gestor\"")
     :iniciated
   end
 
   @doc """
+    Detiene el gestor de recursos.
 
+    Envía un mensaje para detener el proceso y espera confirmación.
+
+    ## Ejemplo
+        iex> Gestor_ND.stop()
+        :stopped
   """
   def stop() do
     send(:gestor, {:stop, self()})
@@ -25,7 +39,13 @@ defmodule Gestor_ND do
   end
 
   @doc """
+    Solicita la asignación de un recurso libre.
 
+    Envía una petición para asignar un recurso disponible al proceso gestor.
+
+    ## Ejemplo
+        iex> Gestor_ND.alloc()
+        :res1
   """
   @spec alloc() :: {:ok, atom()}
   def alloc() do
@@ -39,7 +59,16 @@ defmodule Gestor_ND do
   end
 
   @doc """
+    Libera un recurso previamente asignado.
 
+    Envía una petición para liberar un recurso y espera confirmación.
+
+    ## Parámetros
+      - `resource`: átomo que representa el recurso a liberar.
+
+    ## Ejemplo
+        iex> Gestor_ND.release(:res1)
+        :ok
   """
   @spec release(atom()) :: :ok
   def release(resource) do
@@ -53,7 +82,11 @@ defmodule Gestor_ND do
   end
 
   @doc """
+    Consulta el número de recursos libres disponibles actualmente.
 
+    ## Ejemplo
+        iex> Gestor_ND.avail()
+        2
   """
   @spec avail() :: integer()
   def avail() do
