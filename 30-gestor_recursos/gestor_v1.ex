@@ -33,16 +33,22 @@ defmodule Gestor_ND do
     receive do
       {:ok, recurso} ->
         recurso
-      {:error, :sin_recursos} ->
-        {:error, :sin_recursos}
+      {:error, err} ->
+        {:error, err}
     end
   end
 
   @doc """
 
   """
-  @spec release() :: :ok
-  def release() do
+  @spec release(atom()) :: :ok
+  def release(resource) do
+    send(:gestor, {:release, self(), resource})
+    receive do
+      :ok -> :ok
+      {:error, err} ->
+        {:error, err}
+    end
 
   end
 
@@ -71,8 +77,15 @@ defmodule Gestor_ND do
         send(from, {:ok, rs})
         loop([{rs, from} | busy_resources], rest)
       {:release, from, resource} ->
-
-        loop(busy_resources, free_resources)
+        case Enum.member?(busy_resources, {resource, from}) do
+          true ->
+            busy = List.delete(busy_resources, {resource, from})
+            send(from, :ok)
+            loop(busy, [resource | free_resources])
+          false ->
+            send(from, {:error, :recurso_no_reservado})
+            loop(busy_resources, free_resources)
+        end
       {:avail, from} ->
         send(from, length(free_resources))
         loop(busy_resources, free_resources)
