@@ -17,8 +17,7 @@ defmodule Servidor do
   @spec start(integer()) :: {:ok, pid()}
   def start(n) do
     IO.puts("Iniciando el servidor...")
-    workers = start_workers(n)
-    {:ok, spawn(fn -> server(workers, workers, nil, [], [], 0) end)}
+    {:ok, spawn(fn -> init(n) end)}
   end
 
   @doc """
@@ -62,16 +61,21 @@ defmodule Servidor do
   ###############
   ## Server
   ###############
-  defp server(workers, free_workers, client, results, pending_jobs, num_jobs) do
+  defp init(n) do
+    workers = start_workers(n)
+    loop(workers, workers, nil, [], [], 0)
+  end
+
+  defp loop(workers, free_workers, client, results, pending_jobs, num_jobs) do
     receive do
       {:trabajos, from, jobs} when length(jobs) <= length(free_workers) and num_jobs == 0->
         new_free_workers = send_jobs(free_workers, jobs)
-        server(workers, new_free_workers, from, results, [], length(jobs))
+        loop(workers, new_free_workers, from, results, [], length(jobs))
 
       {:trabajos, from, jobs} ->
         {to_send, rest} = Enum.split(jobs, length(free_workers))
         new_free_workers = send_jobs(free_workers, to_send)
-        server(workers, new_free_workers, from, results, rest, (num_jobs + length(jobs)))
+        loop(workers, new_free_workers, from, results, rest, (num_jobs + length(jobs)))
 
       {:stop, from} ->
         Enum.each(workers, fn worker ->
@@ -82,15 +86,15 @@ defmodule Servidor do
 
       {:resultado, from, result} when length(results) == (num_jobs-1) ->
         send(client ,{:done, [result | results]})
-        server(workers, [from | free_workers], nil, [], [], 0)
+        loop(workers, [from | free_workers], nil, [], [], 0)
 
       {:resultado, from, result} ->
         case pending_jobs do
           [job | rest] ->
             send(from, {:trabajo, self(), job})
-            server(workers, free_workers, client, [result | results], rest, num_jobs)
+            loop(workers, free_workers, client, [result | results], rest, num_jobs)
           [] ->
-            server(workers, free_workers, client, [result | results], pending_jobs, num_jobs)
+            loop(workers, free_workers, client, [result | results], pending_jobs, num_jobs)
         end
     end
   end
