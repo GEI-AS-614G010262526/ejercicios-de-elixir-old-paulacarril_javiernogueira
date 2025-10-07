@@ -63,7 +63,7 @@ defmodule Servidor do
   ###############
   defp init(n) do
     workers = start_workers(n)
-    loop(workers, workers, nil, [], [], 0)
+    loop(workers, workers, nil, [], [], 0, 0)
   end
 
   defp loop(workers, free_workers, client, results, pending_jobs, num_results, num_jobs) do
@@ -81,7 +81,7 @@ defmodule Servidor do
           |> Enum.sort_by(fn {_res, n} -> n end)
           |> Enum.map(fn {res, _n} -> res end)
         send(client ,{:done, sorted_results})
-        loop(workers, [from | free_workers], nil, [], [], 0)
+        loop(workers, [from | free_workers], nil, [], [], 0, 0)
 
       # Caso: Recibir resultados intermedios desde loop y enviar nuevos trabajos si hay pendientes
       {:resultado, from, result} ->
