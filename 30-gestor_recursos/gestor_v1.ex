@@ -15,7 +15,7 @@ defmodule Gestor_ND do
         iex> Gestor_ND.start([:res1, :res2, :res3])
         :iniciated
   """
-  @spec start(list()) :: list()
+  @spec start(list()) :: :iniciated
   def start(resources) do
     pid = spawn(fn -> init(resources) end)
     Process.register(pid, :gestor)
@@ -31,6 +31,7 @@ defmodule Gestor_ND do
         iex> Gestor_ND.stop()
         :stopped
   """
+  @spec stop() :: :stopped
   def stop() do
     send(:gestor, {:stop, self()})
     receive do
@@ -47,12 +48,12 @@ defmodule Gestor_ND do
         iex> Gestor_ND.alloc()
         :res1
   """
-  @spec alloc() :: {:ok, atom()}
+  @spec alloc() :: {:ok, atom()} | {:error, atom()}
   def alloc() do
     send(:gestor, {:alloc, self()})
     receive do
       {:ok, recurso} ->
-        recurso
+        {:ok, recurso}
       {:error, err} ->
         {:error, err}
     end
@@ -70,7 +71,7 @@ defmodule Gestor_ND do
         iex> Gestor_ND.release(:res1)
         :ok
   """
-  @spec release(atom()) :: :ok
+  @spec release(atom()) :: :ok | {:error, atom()}
   def release(resource) do
     send(:gestor, {:release, self(), resource})
     receive do
