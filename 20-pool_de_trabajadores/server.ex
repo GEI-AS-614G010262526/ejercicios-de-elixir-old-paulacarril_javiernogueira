@@ -66,15 +66,15 @@ defmodule Servidor do
     loop(workers, workers, nil, [], [], 0)
   end
 
-  defp loop(workers, free_workers, client, results, pending_jobs, num_jobs) do
+  defp loop(workers, free_workers, client, results, pending_jobs, num_results, num_jobs) do
     receive do
       # Caso: Recibir run_batch -> con menos o igual numero de trabajos que trabajadores libres
       {:trabajos, from, jobs} ->
         {new_free_workers, remaining_jobs} = send_jobs(free_workers, jobs)
-        loop(workers, new_free_workers, from, results, remaining_jobs, num_jobs + length(jobs))
+        loop(workers, new_free_workers, from, results, remaining_jobs, num_results, num_jobs + length(jobs))
 
       # Caso: Recibir resultado final desde loop y enviar al cliente
-      {:resultado, from, result} when length(results) == (num_jobs-1) ->
+      {:resultado, from, result} when num_results == (num_jobs-1) ->
         send(client ,{:done, [result | results]})
         loop(workers, [from | free_workers], nil, [], [], 0)
 
@@ -83,9 +83,9 @@ defmodule Servidor do
         case pending_jobs do
           [job | rest] ->
             send(from, {:trabajo, self(), job})
-            loop(workers, free_workers, client, [result | results], rest, num_jobs)
+            loop(workers, free_workers, client, [result | results], rest, num_results + 1, num_jobs)
           [] ->
-            loop(workers, free_workers, client, [result | results], pending_jobs, num_jobs)
+            loop(workers, free_workers, client, [result | results], pending_jobs, num_results + 1, num_jobs)
         end
 
       # Caso: Recibir stop -> parar todos los trabajadores
