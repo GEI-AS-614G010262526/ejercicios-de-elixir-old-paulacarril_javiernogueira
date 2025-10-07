@@ -22,7 +22,6 @@ defmodule Servidor do
 
   @doc """
     Send the server a list of jobs to do.
-    The results may not be ordered.
 
   ## Example
       iex> jobs = [fn -> :"1" end , fn -> :"2" end]
