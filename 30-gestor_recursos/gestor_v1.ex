@@ -52,10 +52,8 @@ defmodule Gestor_ND do
   def alloc() do
     send(:gestor, {:alloc, self()})
     receive do
-      {:ok, recurso} ->
-        {:ok, recurso}
-      {:error, err} ->
-        {:error, err}
+      {:ok, recurso} -> {:ok, recurso}
+      {:error, err} -> {:error, err}
     end
   end
 
@@ -76,8 +74,7 @@ defmodule Gestor_ND do
     send(:gestor, {:release, self(), resource})
     receive do
       :ok -> :ok
-      {:error, err} ->
-        {:error, err}
+      {:error, err} -> {:error, err}
     end
 
   end
@@ -93,8 +90,7 @@ defmodule Gestor_ND do
   def avail() do
     send(:gestor, {:avail, self()})
     receive do
-      {:avail, n} ->
-        n
+      {:avail, n} -> n
     end
 
   end
@@ -111,10 +107,12 @@ defmodule Gestor_ND do
       {:alloc, from} when free_resources == [] ->
         send(from, {:error, :sin_recursos})
         loop(busy_resources, free_resources)
+
       {:alloc, from} ->
         [rs | rest] = free_resources
         send(from, {:ok, rs})
         loop([{rs, from} | busy_resources], rest)
+
       {:release, from, resource} ->
         case Enum.member?(busy_resources, {resource, from}) do
           true ->
@@ -125,9 +123,11 @@ defmodule Gestor_ND do
             send(from, {:error, :recurso_no_reservado})
             loop(busy_resources, free_resources)
         end
+
       {:avail, from} ->
         send(from, {:avail, length(free_resources)})
         loop(busy_resources, free_resources)
+        
       {:stop, from} ->
         send(from, :stopped)
     end
