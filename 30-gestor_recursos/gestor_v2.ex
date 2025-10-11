@@ -1,19 +1,19 @@
 defmodule Gestor_D do
   @moduledoc """
-  Gestor de recursos Distribuido.
-  Permite que clientes en distintos nodos reserven y liberen recursos
-  a través de un proceso gestor registrado globalmente.
+    Gestor de recursos Distribuido.
   """
 
   @doc """
-  Inicia el gestor con una lista de recursos disponibles y lo registra globalmente.
+    Inicia el gestor con una lista de recursos disponibles.
 
-  ## Parámetros
-    - `resources`: lista de recursos (átomos).
+    Registra el proceso globalmente bajo el nombre `:gestor`.
 
-  ## Ejemplo
-      iex> Gestor_D.start([:r1, :r2, :r3])
-      :iniciated
+    ## Parámetros
+      - `resources`: lista de recursos (átomos) que el gestor podrá asignar.
+
+    ## Ejemplo
+        iex> Gestor_D.start([:res1, :res2, :res3])
+        :iniciated
   """
   @spec start(list()) :: :iniciated
   def start(resources) do
@@ -23,9 +23,13 @@ defmodule Gestor_D do
   end
 
   @doc """
-  Detiene el gestor distribuido.
+    Detiene el gestor de recursos.
 
-  Envía un mensaje al proceso gestor y espera confirmación.
+    Envía un mensaje para detener el proceso y espera confirmación.
+
+    ## Ejemplo
+        iex> Gestor_D.stop()
+        :stopped
   """
   @spec stop() :: :stopped
   def stop() do
@@ -36,9 +40,13 @@ defmodule Gestor_D do
   end
 
   @doc """
-  Solicita la asignación de un recurso libre.
+    Solicita la asignación de un recurso libre.
 
-  Si no hay recursos disponibles, devuelve `{:error, :sin_recursos}`.
+    Envía una petición para asignar un recurso disponible al proceso gestor.
+
+    ## Ejemplo
+        iex> Gestor_D.alloc()
+        :res1
   """
   @spec alloc() :: {:ok, atom()} | {:error, atom()}
   def alloc() do
@@ -50,9 +58,16 @@ defmodule Gestor_D do
   end
 
   @doc """
-  Libera un recurso previamente asignado.
+    Libera un recurso previamente asignado.
 
-  Verifica que el proceso solicitante sea quien lo reservó.
+    Envía una petición para liberar un recurso y espera confirmación.
+
+    ## Parámetros
+      - `resource`: átomo que representa el recurso a liberar.
+
+    ## Ejemplo
+        iex> Gestor_D.release(:res1)
+        :ok
   """
   @spec release(atom()) :: :ok | {:error, atom()}
   def release(resource) do
@@ -64,7 +79,11 @@ defmodule Gestor_D do
   end
 
   @doc """
-  Consulta el número de recursos libres disponibles actualmente.
+    Consulta el número de recursos libres disponibles actualmente.
+
+    ## Ejemplo
+        iex> Gestor_D.avail()
+        2
   """
   @spec avail() :: integer()
   def avail() do
@@ -75,7 +94,7 @@ defmodule Gestor_D do
   end
 
   #################
-  ## Gestor Interno
+  ## Gestor
   #################
   defp init(resources) do
     loop([], resources)
@@ -98,7 +117,6 @@ defmodule Gestor_D do
             busy = List.delete(busy_resources, {resource, from})
             send(from, :ok)
             loop(busy, [resource | free_resources])
-
           false ->
             send(from, {:error, :recurso_no_reservado})
             loop(busy_resources, free_resources)
