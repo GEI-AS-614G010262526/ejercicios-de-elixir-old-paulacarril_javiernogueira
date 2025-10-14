@@ -138,9 +138,9 @@ defmodule Gestor_TF do
     end
   end
 
-defp get_process_resources(pid, []), do: []
+defp get_process_resources(_pid, []), do: []
 
-defp get_process_resources(pid, [{recurso, ^pid} | tail]) do
+defp get_process_resources(pid, [{recurso, pid_recurso} | tail]) when pid == pid_recurso do
   [recurso | get_process_resources(pid, tail)]
 end
 
@@ -148,9 +148,9 @@ defp get_process_resources(pid, [_ | tail]) do
   get_process_resources(pid, tail)
 end
 
-defp remove_process_resources(pid, []), do: []
+defp remove_process_resources(_pid, []), do: []
 
-defp remove_process_resources(pid, [{_recurso, ^pid} | tail]) do
+defp remove_process_resources(pid, [{_recurso, pid_recurso} | tail]) when pid == pid_recurso do
   remove_process_resources(pid, tail)
 end
 
