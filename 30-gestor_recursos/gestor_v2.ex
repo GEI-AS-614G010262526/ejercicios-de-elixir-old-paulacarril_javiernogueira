@@ -1,6 +1,17 @@
 defmodule Gestor_D do
   @moduledoc """
     Gestor de recursos Distribuido.
+
+    Instrucciones para conexión de nodos:
+
+    ## Nodo servidor
+      iex --sname nombreNodoServer --cookie miscookies
+
+    ## Nodo cliente
+      iex --sname nombreNodoCliente --cookie miscookies
+
+    ## Conexión desde nodo cliente al servidor
+      Node.connect(:"nombreNodoServer@hostname_del_servidor")
   """
 
   @doc """
