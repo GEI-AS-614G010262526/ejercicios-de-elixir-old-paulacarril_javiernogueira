@@ -1,6 +1,5 @@
 defmodule MicroBankTest do
   use ExUnit.Case
-  # doctest MicroBank
 
   setup do
     # Nos aseguramos de detener el proceso servidor
