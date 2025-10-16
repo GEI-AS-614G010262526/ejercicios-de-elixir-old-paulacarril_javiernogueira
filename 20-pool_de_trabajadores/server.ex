@@ -2,10 +2,7 @@ defmodule Servidor do
   @moduledoc """
     Servidor para realizar _Trabajos_
   """
-
-  Code.require_file("worker.ex")
-
-
+  
   @doc """
     Start the server with n workers.
 
