@@ -97,6 +97,7 @@ defmodule Gestor_TF do
   ## Gestor
   #################
   defp init(resources) do
+    Process.flag(:trap_exit, true)
     loop([], resources)
   end
 
@@ -109,7 +110,8 @@ defmodule Gestor_TF do
 
       {:alloc, from} ->
         [rs | rest] = free_resources
-        Process.monitor(from)
+        Process.link(from)
+        Node.monitor(node(from), true)
         send(from, {:ok, rs})
         loop([{rs, from} | busy_resources], rest)
 
@@ -117,6 +119,7 @@ defmodule Gestor_TF do
         case Enum.member?(busy_resources, {resource, from}) do
           true ->
             busy = List.delete(busy_resources, {resource, from})
+            Process.unlink(from)
             send(from, :ok)
             loop(busy, [resource | free_resources])
           false ->
@@ -128,9 +131,14 @@ defmodule Gestor_TF do
         send(from, {:avail, length(free_resources)})
         loop(busy_resources, free_resources)
 
-      {:DOWN, _ref, :process, pid_caido, _reason} ->
+      {:EXIT, pid_caido, _reason} ->
         recursos_a_liberar = get_process_resources(pid_caido, busy_resources)
         recursos_de_otros = remove_process_resources(pid_caido, busy_resources)
+        loop(recursos_de_otros, recursos_a_liberar ++ free_resources)
+
+      {:nodedown, nodo_caido} ->
+        recursos_a_liberar = get_node_resources(nodo_caido, busy_resources)
+        recursos_de_otros = remove_node_resources(nodo_caido, busy_resources)
         loop(recursos_de_otros, recursos_a_liberar ++ free_resources)
         
       {:stop, from} ->
@@ -156,5 +164,25 @@ end
 
 defp remove_process_resources(pid, [head | tail]) do
   [head | remove_process_resources(pid, tail)]
-end 
+end
+
+defp get_node_resources(_nodo, []), do: []
+
+defp get_node_resources(nodo, [{recurso, pid_recurso} | tail]) when node(pid_recurso) == nodo do
+  [recurso | get_node_resources(nodo, tail)]
+end
+
+defp get_node_resources(nodo, [_ | tail]) do
+  get_node_resources(nodo, tail)
+end
+
+defp remove_node_resources(_nodo, []), do: []
+
+defp remove_node_resources(nodo, [{_recurso, pid_recurso} | tail]) when node(pid_recurso) == nodo do
+  remove_node_resources(nodo, tail)
+end
+
+defp remove_node_resources(nodo, [head | tail]) do
+  [head | remove_node_resources(nodo, tail)]
+end
 end
