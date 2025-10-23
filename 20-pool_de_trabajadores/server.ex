@@ -2,7 +2,7 @@ defmodule Servidor do
   @moduledoc """
     Servidor para realizar _Trabajos_
   """
-  
+
   @doc """
     Start the server with n workers.
 
@@ -86,7 +86,7 @@ defmodule Servidor do
              send(from, {:trabajo, self(), job})
              loop(workers, free_workers, client, [result | results], rest, num_results + 1, num_jobs)
            [] ->
-             loop(workers, free_workers, client, [result | results], pending_jobs, num_results + 1, num_jobs)
+             loop(workers, [from | free_workers], client, [result | results], pending_jobs, num_results + 1, num_jobs)
          end
 
       # Caso: Recibir stop -> parar todos los trabajadores
