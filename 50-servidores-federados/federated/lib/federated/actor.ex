@@ -1,9 +1,9 @@
-def module Federated.Actor do
+defmodule Federated.Actor do
   @moduledoc"""
 
   """
 
-  defstruct {:id, :name, :avatar, inbox: []}
+  defstruct [:id, :name, :avatar, inbox: []]
 
   def new(id, name, avatar) do
     %__MODULE__{id: id, name: name, avatar: avatar, inbox: []}
