@@ -25,7 +25,8 @@ defmodule Federated.Server do
 
   def post_message(sender, receiver, msg) do
     sender_normalized = normalize_actor(sender)
-    GenServer.call(via(Actor.server_name(sender_normalized)), {:post_message, sender_normalized, receiver, msg})
+    receiver_normalized = normalize_actor(receiver)
+    GenServer.call(via(Actor.server_name(sender_normalized)), {:post_message, sender_normalized, receiver_normalized, msg})
   end
 
   def retrieve_messages(actor) do
@@ -57,9 +58,21 @@ defmodule Federated.Server do
     end
   end
 
-  def handle_call({:post_message, _sender, _receiver, _msg}, _from, state) do
-    # TODO: Implement message posting logic
-    {:reply, :ok, state}
+  def handle_call({:post_message, sender, receiver, msg}, _from, state) do
+    with true <- registered?(state, sender),
+        username <- Actor.username(receiver) do
+      cond do
+        Actor.server_name(receiver) == state.name ->
+          new_inbox = [%{from: sender.id, content: msg, timestamp: DateTime.utc_now()} | Map.get(state.actors, username).inbox]
+          updated_actor = %{Map.get(state.actors, username) | inbox: new_inbox}
+          new_state = put_in(state.actors[username], updated_actor)
+          {:reply, :ok, new_state}
+        true ->
+          {:reply, Network.forward_post_message(state.name, Actor.server_name(receiver), receiver, msg), state}
+      end
+    else
+      _ -> {:reply, {:error, :unknown_sender}, state}
+    end
   end
 
   def handle_call({:retrieve_messages, _actor}, _from, state) do
