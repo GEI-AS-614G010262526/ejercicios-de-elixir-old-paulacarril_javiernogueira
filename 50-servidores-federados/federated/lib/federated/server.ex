@@ -75,9 +75,18 @@ defmodule Federated.Server do
     end
   end
 
-  def handle_call({:retrieve_messages, _actor}, _from, state) do
-    # TODO: Implement message retrieval logic
-    {:reply, :ok, state}
+  def handle_call({:retrieve_messages, actor}, _from, state) do
+    with true <- registered?(state, actor),
+        username <- Actor.username(actor) do
+      cond do
+        Actor.server_name(actor) == state.name ->
+          {:reply, Map.get(state.actors, username).inbox, state}
+        true ->
+          {:reply, {:error, :incorrect_server}, state}
+      end
+    else
+      _ -> {:reply, {:error, :unknown_user}, state}
+    end
   end
 
   #################
