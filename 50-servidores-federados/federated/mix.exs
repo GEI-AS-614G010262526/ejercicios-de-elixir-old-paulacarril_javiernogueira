@@ -1,4 +1,4 @@
-defmodule FederalServer.MixProject do
+defmodule Federated.MixProject do
   use Mix.Project
 
   def project do
