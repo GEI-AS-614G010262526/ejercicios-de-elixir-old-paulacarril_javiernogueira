@@ -60,6 +60,7 @@ defmodule Federated.Server do
 
   def handle_call({:post_message, sender, receiver, msg}, _from, state) do
     with true <- registered?(state, sender),
+        true <- registered?(state, receiver),
         username <- Actor.username(receiver) do
       cond do
         Actor.server_name(receiver) == state.name ->
