@@ -43,7 +43,7 @@ defmodule Federated.Seeder do
   def seed_with_messages(server_name, actors \\ default_actors()) do
 
     # First, seed all actors
-    {:ok, actor_message} = seed(server_name, actors)
+    {:ok, _actor_message} = seed(server_name, actors)
 
     # Add messages between actors
     messages = default_messages(server_name)

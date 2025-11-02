@@ -10,6 +10,10 @@ defmodule Federated.Application do
     ]
 
     opts = [strategy: :one_for_one, name: Federated.Supervisor]
-    Supervisor.start_link(children, opts)
+    case Supervisor.start_link(children, opts) do
+      {:ok, pid} -> {:ok, pid}
+      other -> other
+    end
   end
 end
+
