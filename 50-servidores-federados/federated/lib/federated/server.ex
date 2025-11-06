@@ -18,9 +18,10 @@ defmodule Federated.Server do
   end
 
   def get_profile(requestor, actor_id) do
-    req_normalized = normalize_actor(requestor)
-    actor_normalized = normalize_actor(actor_id)
-    GenServer.call(via(Actor.server_name(actor_normalized)), {:get_profile, req_normalized, actor_normalized})
+  req_normalized = normalize_actor(requestor)
+  actor_normalized = normalize_actor(actor_id)
+  req_server = Actor.server_name(req_normalized)
+  GenServer.call(via(req_server), {:get_profile, req_normalized, actor_normalized})
   end
 
   def post_message(sender, receiver, msg) do
@@ -51,7 +52,8 @@ defmodule Federated.Server do
         Actor.server_name(actor) == state.name ->
           {:reply, Map.fetch(state.actors, username), state}
         true ->
-          {:reply, Network.forward_get_profile(state.name, Actor.server_name(actor), actor.id), state}
+          result = Network.forward_get_profile(state.name, Actor.server_name(actor), actor.id)
+          {:reply, result, state}
       end
     else
       _ -> {:reply, {:error, :unknown_requestor}, state}
@@ -60,7 +62,6 @@ defmodule Federated.Server do
 
   def handle_call({:post_message, sender, receiver, msg}, _from, state) do
     with true <- registered?(state, sender),
-        true <- registered?(state, receiver),
         username <- Actor.username(receiver) do
       cond do
         Actor.server_name(receiver) == state.name ->
@@ -69,7 +70,8 @@ defmodule Federated.Server do
           new_state = put_in(state.actors[username], updated_actor)
           {:reply, :ok, new_state}
         true ->
-          {:reply, Network.forward_post_message(state.name, Actor.server_name(receiver), receiver, msg), state}
+          result = Network.forward_post_message(sender.id, Actor.server_name(receiver), receiver.id, msg)
+          {:reply, result, state}
       end
     else
       _ -> {:reply, {:error, :unknown_sender}, state}
@@ -88,6 +90,40 @@ defmodule Federated.Server do
     else
       _ -> {:reply, {:error, :unknown_user}, state}
     end
+  end
+  
+  def handle_call({:remote_get_profile, _requesting_server, username}, _from, state) do
+    {:reply, Map.fetch(state.actors, username), state}
+  end
+
+  def handle_call({:remote_post_message, sender_id, username, msg}, _from, state) do
+    case Map.fetch(state.actors, username) do
+      {:ok, actor} ->
+        new_inbox = [%{from: sender_id, content: msg, timestamp: DateTime.utc_now()} | actor.inbox]
+        updated_actor = %{actor | inbox: new_inbox}
+        new_state = put_in(state.actors[username], updated_actor)
+        {:reply, :ok, new_state}
+      :error ->
+        {:reply, {:error, :receiver_not_found}, state}
+    end
+  end
+
+  ####################
+  ## RPC FUNCTIONS
+  ####################
+
+  def remote_get_profile(requesting_server, actor_id) do
+    actor = normalize_actor(actor_id)
+    username = Actor.username(actor)
+    
+    GenServer.call(via(Actor.server_name(actor)), {:remote_get_profile, requesting_server, username})
+  end
+
+  def remote_post_message(sender_id, receiver_id, msg) do
+    receiver = normalize_actor(receiver_id)
+    username = Actor.username(receiver)
+    
+    GenServer.call(via(Actor.server_name(receiver)), {:remote_post_message, sender_id, username, msg})
   end
 
   #################
