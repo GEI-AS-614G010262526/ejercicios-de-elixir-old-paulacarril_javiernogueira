@@ -18,10 +18,10 @@ defmodule Federated.Server do
   end
 
   def get_profile(requestor, actor_id) do
-  req_normalized = normalize_actor(requestor)
-  actor_normalized = normalize_actor(actor_id)
-  req_server = Actor.server_name(req_normalized)
-  GenServer.call(via(req_server), {:get_profile, req_normalized, actor_normalized})
+    req_normalized = normalize_actor(requestor)
+    actor_normalized = normalize_actor(actor_id)
+    req_server = Actor.server_name(req_normalized)
+    GenServer.call(via(req_server), {:get_profile, req_normalized, actor_normalized})
   end
 
   def post_message(sender, receiver, msg) do
