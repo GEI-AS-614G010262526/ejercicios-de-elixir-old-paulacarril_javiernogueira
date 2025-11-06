@@ -50,7 +50,10 @@ defmodule Federated.Server do
          username <- Actor.username(actor) do
       cond do
         Actor.server_name(actor) == state.name ->
-          {:reply, Map.fetch(state.actors, username), state}
+          case Map.fetch(state.actors, username) do
+            {:ok, actor} -> {:reply, {:ok, strip_inbox(actor)}, state}
+            :error -> {:reply, :error, state}
+          end
         true ->
           result = Network.forward_get_profile(state.name, Actor.server_name(actor), actor.id)
           {:reply, result, state}
@@ -93,7 +96,10 @@ defmodule Federated.Server do
   end
   
   def handle_call({:remote_get_profile, _requesting_server, username}, _from, state) do
-    {:reply, Map.fetch(state.actors, username), state}
+    case Map.fetch(state.actors, username) do
+      {:ok, actor} -> {:reply, {:ok, strip_inbox(actor)}, state}
+      :error -> {:reply, :error, state}
+    end
   end
 
   def handle_call({:remote_post_message, sender_id, username, msg}, _from, state) do
@@ -141,4 +147,10 @@ defmodule Federated.Server do
     username = String.split(id, "@") |> Enum.at(0)
     %Actor{id: id, name: username, avatar: nil, inbox: []}
   end
+
+  defp strip_inbox(%Actor{} = actor) do
+    Map.from_struct(actor)
+    |> Map.delete(:inbox)
+  end
+
 end
