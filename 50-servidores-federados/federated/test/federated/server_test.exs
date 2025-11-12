@@ -6,7 +6,7 @@ defmodule Federated.ServerTest do
 
   setup do
     server_name = "test_server_#{:rand.uniform(100000)}"
-    
+
     case Server.start_link(server_name) do
       {:ok, pid} -> {:ok, server: server_name, pid: pid}
       {:error, {:already_started, pid}} -> {:ok, server: server_name, pid: pid}
@@ -17,10 +17,10 @@ defmodule Federated.ServerTest do
   describe "start_link/1" do
     test "starts a server with given name" do
       server_name = "new_server_#{:rand.uniform(100000)}"
-      
+
       assert {:ok, pid} = Server.start_link(server_name)
       assert Process.alive?(pid)
-      
+
       GenServer.stop(pid)
     end
   end
@@ -83,7 +83,7 @@ defmodule Federated.ServerTest do
       receiver = Actor.new("receiver@#{server}", "Receiver", "img://receiver")
       Server.add_actor(server, receiver)
 
-      assert {:error, :unknown_sender} == 
+      assert {:error, :unknown_sender} ==
         Server.post_message("unknown@#{server}", "receiver@#{server}", "Hello!")
     end
 
@@ -91,7 +91,7 @@ defmodule Federated.ServerTest do
       sender = Actor.new("sender@#{server}", "Sender", "img://sender")
       Server.add_actor(server, sender)
 
-      assert {:error, :unknown_sender} == 
+      assert {:error, :unknown_receiver} ==
         Server.post_message("sender@#{server}", "unknown@#{server}", "Hello!")
     end
   end
@@ -134,11 +134,10 @@ defmodule Federated.ServerTest do
       Server.post_message("sender@#{server}", "receiver@#{server}", "Test message")
 
       [message | _] = Server.retrieve_messages("receiver@#{server}")
-      
+
       assert "sender@#{server}" == message.from
       assert "Test message" == message.content
       assert %DateTime{} = message.timestamp
     end
   end
 end
-

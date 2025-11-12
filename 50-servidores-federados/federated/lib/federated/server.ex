@@ -68,10 +68,15 @@ defmodule Federated.Server do
         username <- Actor.username(receiver) do
       cond do
         Actor.server_name(receiver) == state.name ->
-          new_inbox = [%{from: sender.id, content: msg, timestamp: DateTime.utc_now()} | Map.get(state.actors, username).inbox]
-          updated_actor = %{Map.get(state.actors, username) | inbox: new_inbox}
-          new_state = put_in(state.actors[username], updated_actor)
-          {:reply, :ok, new_state}
+          case registered?(state, receiver) do
+            true ->
+              new_inbox = [%{from: sender.id, content: msg, timestamp: DateTime.utc_now()} | Map.get(state.actors, username).inbox]
+              updated_actor = %{Map.get(state.actors, username) | inbox: new_inbox}
+              new_state = put_in(state.actors[username], updated_actor)
+              {:reply, :ok, new_state}
+            false ->
+              {:reply, {:error, :unknown_receiver}, state}
+          end
         true ->
           result = Network.forward_post_message(sender.id, Actor.server_name(receiver), receiver.id, msg)
           {:reply, result, state}
@@ -94,7 +99,7 @@ defmodule Federated.Server do
       _ -> {:reply, {:error, :unknown_user}, state}
     end
   end
-  
+
   def handle_call({:remote_get_profile, _requesting_server, username}, _from, state) do
     case Map.fetch(state.actors, username) do
       {:ok, actor} -> {:reply, {:ok, strip_inbox(actor)}, state}
@@ -121,14 +126,14 @@ defmodule Federated.Server do
   def remote_get_profile(requesting_server, actor_id) do
     actor = normalize_actor(actor_id)
     username = Actor.username(actor)
-    
+
     GenServer.call(via(Actor.server_name(actor)), {:remote_get_profile, requesting_server, username})
   end
 
   def remote_post_message(sender_id, receiver_id, msg) do
     receiver = normalize_actor(receiver_id)
     username = Actor.username(receiver)
-    
+
     GenServer.call(via(Actor.server_name(receiver)), {:remote_post_message, sender_id, username, msg})
   end
 
